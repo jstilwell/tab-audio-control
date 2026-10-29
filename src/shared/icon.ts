@@ -45,9 +45,21 @@ export function iconHeat({ volume, muted }: IconState): number {
 }
 
 export function drawIcon(ctx: Ctx, size: number, state: IconState): void {
-	const s = size;
-	ctx.clearRect(0, 0, s, s);
+	ctx.clearRect(0, 0, size, size);
+	if (size < 48) {
+		drawTile(ctx, size, state);
+		return;
+	}
+	// Store/extension-page sizes: Chrome Web Store asks for 96×96 artwork
+	// centered in 128×128 with transparent padding (and the same ratio at 48).
+	const pad = size / 8;
+	ctx.save();
+	ctx.translate(pad, pad);
+	drawTile(ctx, size - 2 * pad, state);
+	ctx.restore();
+}
 
+function drawTile(ctx: Ctx, s: number, state: IconState): void {
 	// Tile: deep indigo, a touch lighter at the top.
 	const tile = ctx.createLinearGradient(0, 0, 0, s);
 	tile.addColorStop(0, '#241d45');
