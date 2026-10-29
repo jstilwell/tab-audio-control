@@ -1,10 +1,52 @@
-node_modules
-dist
-release
-.DS_Store
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+release/
+*.zip
+*.crx
+
+# Extension signing keys — never commit (Chrome creates these when packing)
+*.pem
+key.pem
+*.key
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.local
+.npmrc
+.secrets/
+
+# Generated during tests and scripts
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+tests/e2e/.build/
+scripts/.build/
+coverage/
+.vite/
+.eslintcache
+*.tsbuildinfo
+
+# Logs
 *.log
-.vite
-tests/e2e/.build
-test-results
-playwright-report
-scripts/.build
+npm-debug.log*
+logs/
+
+# Editors & OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# AI assistant local state
+.claude/

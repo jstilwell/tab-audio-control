@@ -1,6 +1,7 @@
 // The packaged extension, loaded into Chromium the way a user would load it.
 import { test as base, chromium, expect, type BrowserContext } from '@playwright/test';
 import { resolve } from 'node:path';
+import { stubMediaTab } from '../../scripts/popup-stub.mjs';
 
 const DIST = resolve(import.meta.dirname, '../../dist');
 
@@ -47,30 +48,7 @@ for (const scheme of ['dark', 'light'] as const) {
 	test(`popup renders in ${scheme} mode`, async ({ context, extensionId }) => {
 		const page = await context.newPage();
 		await page.emulateMedia({ colorScheme: scheme });
-		await page.addInitScript(() => {
-			const status = { total: 1, routed: 1, limited: 0, playing: true, waitingForGesture: false };
-			const c = chrome as unknown as Record<string, Record<string, unknown>>;
-			c.tabs!.query = async () => [{ id: 4242, active: true }];
-			c.tabs!.get = async () => ({ id: 4242, audible: true });
-			c.tabs!.sendMessage = async () => undefined;
-			c.tabs!.connect = () => {
-				const listeners: ((m: unknown) => void)[] = [];
-				const timer = setInterval(() => {
-					const bins = Array.from({ length: 72 }, (_, i) =>
-						Math.max(0, 200 - Math.abs(i - 22) * 5 - (i % 5) * 6 + (i > 45 ? -30 : 0))
-					);
-					for (const l of listeners) l({ bins });
-				}, 50);
-				return {
-					onMessage: { addListener: (l: (m: unknown) => void) => listeners.push(l) },
-					disconnect: () => clearInterval(timer)
-				};
-			};
-			c.scripting!.executeScript = async () => [{ frameId: 0, result: status }];
-			c.action!.setBadgeText = async () => {};
-			c.action!.setBadgeBackgroundColor = async () => {};
-			c.action!.setBadgeTextColor = async () => {};
-		});
+		await page.addInitScript(stubMediaTab);
 		await page.setViewportSize({ width: 380, height: 760 });
 		await page.goto(`chrome-extension://${extensionId}/popup/index.html`);
 		await expect(page.getByText('Full screen safe')).toBeVisible();

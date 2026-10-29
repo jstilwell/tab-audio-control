@@ -3,7 +3,20 @@
 	"private": true,
 	"version": "0.1.0",
 	"description": "Per-tab volume, boost, EQ and voice focus for Chrome without breaking full screen.",
+	"license": "MIT",
+	"author": "Jesse Stilwell",
+	"homepage": "https://github.com/jstilwell/tab-audio-control#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jstilwell/tab-audio-control.git"
+	},
+	"bugs": {
+		"url": "https://github.com/jstilwell/tab-audio-control/issues"
+	},
 	"type": "module",
+	"engines": {
+		"node": ">=22"
+	},
 	"scripts": {
 		"dev": "node scripts/build.mjs --watch",
 		"build": "node scripts/build.mjs",
@@ -14,7 +27,8 @@
 		"verify": "npm run check && npm run lint && npm run test && npm run test:e2e",
 		"icons": "node scripts/icons.mjs",
 		"package": "npm run verify && node scripts/package.mjs",
-		"test:e2e": "npm run build && playwright test"
+		"test:e2e": "npm run build && playwright test",
+		"store-assets": "npm run build && node scripts/store-assets.mjs"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.1.1",

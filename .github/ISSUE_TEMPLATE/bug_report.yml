@@ -1,0 +1,34 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: site
+    attributes:
+      label: Site
+      description: The site where it happened. A link helps, but leave out anything private.
+      placeholder: youtube.com
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      description: The status shown at the top right of the popup.
+      options:
+        - Full screen safe (in-page)
+        - Capture mode
+        - Volume only
+        - Not sure
+  - type: input
+    id: versions
+    attributes:
+      label: Extension and Chrome versions
+      placeholder: 0.1.0 on Chrome 141, macOS
+    validations:
+      required: true
