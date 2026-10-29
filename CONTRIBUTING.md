@@ -66,6 +66,16 @@ A release must start from a clean `main` with notes under `## [Unreleased]` in `
 
 Uploading to the Chrome Web Store stays manual; the script prints the steps.
 
+### Signing
+
+The Web Store listing uses [Verified CRX uploads](https://developer.chrome.com/docs/webstore/update#verified-uploads): every update must be a `.crx` signed with the maintainer's private key, whose public half is committed as `store/crx-public-key.pem`. `bin/build.sh` signs with `scripts/sign.mjs` and refuses a release without the key. It looks for the key in this order:
+
+1. `CRX_SIGNING_KEY`: a path to the `.pem`
+2. `OP_CRX_KEY_ITEM` (and optionally `OP_VAULT`): a 1Password Document item, fetched into a private temp file that's deleted when the script exits
+3. `~/.config/tab-audio-control/crx-signing-key.pem`
+
+Personal settings go in `.env.release`, which is gitignored, for example `OP_CRX_KEY_ITEM=<item id>`. The private key must never be committed: `.gitignore` blocks `*.pem`, and the signer refuses a key stored inside the repo.
+
 ## Conventions
 
 - TypeScript, strict. Svelte 5 runes.

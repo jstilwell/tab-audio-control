@@ -8,10 +8,12 @@ release/
 *.zip
 *.crx
 
-# Extension signing keys — never commit (Chrome creates these when packing)
+# Extension signing keys — never commit (Chrome creates these when packing).
+# The one exception is the *public* key registered with the Web Store.
 *.pem
 key.pem
 *.key
+!store/crx-public-key.pem
 
 # Environment & secrets
 .env

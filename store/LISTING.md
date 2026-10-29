@@ -1,6 +1,8 @@
 # Chrome Web Store listing
 
-Copy for the [Developer Dashboard](https://chrome.google.com/webstore/devconsole). Images in this folder are regenerated from the real popup with `npm run store-assets`, and the upload zip comes from `npm run package`.
+Copy for the [Developer Dashboard](https://chrome.google.com/webstore/devconsole). Images in this folder are regenerated from the real popup with `npm run store-assets`.
+
+**Package uploads:** the listing uses Verified CRX uploads, so upload the signed `release/tab-audio-control-<version>.crx` from `bin/build.sh`, not the zip. `crx-public-key.pem` is the public key registered on the dashboard's Package tab.
 
 ## Store listing tab
 

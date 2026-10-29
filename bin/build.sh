@@ -9,13 +9,23 @@
 #     2. npm ci, then bump package.json + public/manifest.json together and
 #        date the CHANGELOG
 #     3. the full verify suite (types, lint, unit, browser tests)
-#     4. package release/tab-audio-control-<version>.zip and inspect it
+#     4. package release/tab-audio-control-<version>.zip, inspect it, and sign
+#        release/tab-audio-control-<version>.crx (Web Store "Verified CRX uploads")
 #     5. commit "chore(release): v<version>" and tag v<version>
 #     6. with --push: push main + tag, create a GitHub release with the zip
 #
 # Options:
 #   --push           push and publish the GitHub release (needs `gh auth login`)
 #   --store-assets   also re-render store/ screenshots from the current popup
+#
+# Signing key (releases require it; the Web Store only accepts signed updates),
+# first match wins:
+#   1. $CRX_SIGNING_KEY, a path to the .pem
+#   2. $OP_CRX_KEY_ITEM, a 1Password Document item ID (optionally $OP_VAULT);
+#      fetched into a private temp file that's deleted when the script exits
+#   3. ~/.config/tab-audio-control/crx-signing-key.pem
+# Put personal settings like OP_CRX_KEY_ITEM in .env.release (gitignored).
+# The key must match store/crx-public-key.pem and must never be in the repo.
 #
 # The Chrome Web Store upload stays manual: the script prints the steps at the end.
 #
@@ -34,7 +44,7 @@ for arg in "$@"; do
 	--push) PUSH=true ;;
 	--store-assets) STORE_ASSETS=true ;;
 	-h | --help)
-		sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+		awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
 		exit 0
 		;;
 	patch | minor | major) BUMP="$arg" ;;
@@ -58,6 +68,30 @@ fail() {
 }
 
 json_version() { node -p "require('./$1').version"; }
+
+# Personal, untracked settings (OP_CRX_KEY_ITEM, OP_VAULT, CRX_SIGNING_KEY).
+if [[ -f .env.release ]]; then
+	# shellcheck source=/dev/null
+	source .env.release
+fi
+
+# Sets SIGNING_KEY to a .pem path, fetching from 1Password if configured.
+resolve_signing_key() {
+	if [[ -n "${CRX_SIGNING_KEY:-}" ]]; then
+		SIGNING_KEY="$CRX_SIGNING_KEY"
+	elif [[ -n "${OP_CRX_KEY_ITEM:-}" ]]; then
+		command -v op >/dev/null || fail "OP_CRX_KEY_ITEM is set but the 1Password CLI (op) isn't installed."
+		KEY_DIR="$(mktemp -d)"
+		trap 'rm -rf "$KEY_DIR"' EXIT
+		SIGNING_KEY="$KEY_DIR/crx-signing-key.pem"
+		local args=(document get "$OP_CRX_KEY_ITEM" --out-file "$SIGNING_KEY" --file-mode 0600)
+		[[ -n "${OP_VAULT:-}" ]] && args+=(--vault "$OP_VAULT")
+		echo "Reading the signing key from 1Password…"
+		op "${args[@]}" >/dev/null || fail "Couldn't read 1Password item $OP_CRX_KEY_ITEM."
+	else
+		SIGNING_KEY="$HOME/.config/tab-audio-control/crx-signing-key.pem"
+	fi
+}
 
 # Fails if the zip holds anything that shouldn't ship (keys, maps, env files).
 inspect_zip() {
@@ -83,6 +117,12 @@ if [[ -z "$BUMP" ]]; then
 	step "Packaging"
 	node scripts/package.mjs
 	inspect_zip "release/tab-audio-control-$(json_version dist/manifest.json).zip"
+	step "Signing"
+	resolve_signing_key
+	CRX_SIGNING_KEY="$SIGNING_KEY" node scripts/sign.mjs || {
+		[[ $? -eq 2 ]] || exit 1
+		echo "Skipped: no signing key, so no .crx (fine for local builds)."
+	}
 	exit 0
 fi
 
@@ -92,6 +132,9 @@ fi
 step "Preflight"
 [[ "$(git rev-parse --abbrev-ref HEAD)" == "main" ]] || fail "Releases are cut from main."
 [[ -z "$(git status --porcelain)" ]] || fail "Working tree isn't clean. Commit or stash first."
+resolve_signing_key
+[[ -f "$SIGNING_KEY" ]] ||
+	fail "No CRX signing key at $SIGNING_KEY. The Web Store requires signed updates (set OP_CRX_KEY_ITEM in .env.release, or CRX_SIGNING_KEY)."
 if [[ "$PUSH" == true ]]; then
 	gh auth status >/dev/null 2>&1 || fail "gh isn't logged in. Run: gh auth login"
 	# An empty remote (first push) has no main yet, so there's nothing to be behind.
@@ -171,7 +214,11 @@ fi
 step "Packaging"
 node scripts/package.mjs
 ZIP="release/tab-audio-control-$VERSION.zip"
+CRX="release/tab-audio-control-$VERSION.crx"
 inspect_zip "$ZIP"
+
+step "Signing"
+CRX_SIGNING_KEY="$SIGNING_KEY" node scripts/sign.mjs
 
 step "Committing and tagging $TAG"
 git add package.json package-lock.json public/manifest.json CHANGELOG.md
@@ -200,7 +247,7 @@ cat <<EOF
 
 Chrome Web Store:
   1. https://chrome.google.com/webstore/devconsole → Tab Audio Control → Package → Upload new package
-  2. Upload $ZIP
+  2. Upload $CRX  (signed; verified uploads reject the plain zip)
   3. If the UI changed, upload new screenshots from store/ (bin/build.sh --store-assets renders them)
   4. Submit for review
 EOF
