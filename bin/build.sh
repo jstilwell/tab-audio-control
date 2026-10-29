@@ -6,8 +6,9 @@
 #   bin/build.sh <patch|minor|major|x.y.z> [--push]
 #                                    cut a release:
 #     1. preflight: on main, clean tree, tag unused, CHANGELOG has notes
-#     2. bump package.json + public/manifest.json together, date the CHANGELOG
-#     3. npm ci, then the full verify suite (types, lint, unit, browser tests)
+#     2. npm ci, then bump package.json + public/manifest.json together and
+#        date the CHANGELOG
+#     3. the full verify suite (types, lint, unit, browser tests)
 #     4. package release/tab-audio-control-<version>.zip and inspect it
 #     5. commit "chore(release): v<version>" and tag v<version>
 #     6. with --push: push main + tag, create a GitHub release with the zip
@@ -93,8 +94,11 @@ step "Preflight"
 [[ -z "$(git status --porcelain)" ]] || fail "Working tree isn't clean. Commit or stash first."
 if [[ "$PUSH" == true ]]; then
 	gh auth status >/dev/null 2>&1 || fail "gh isn't logged in. Run: gh auth login"
-	git fetch --quiet origin main
-	[[ -z "$(git rev-list HEAD..origin/main)" ]] || fail "origin/main has commits you don't. Pull first."
+	# An empty remote (first push) has no main yet, so there's nothing to be behind.
+	if git ls-remote --exit-code --heads origin main >/dev/null 2>&1; then
+		git fetch --quiet origin main
+		[[ -z "$(git rev-list HEAD..origin/main)" ]] || fail "origin/main has commits you don't. Pull first."
+	fi
 fi
 
 CURRENT="$(json_version package.json)"
@@ -116,6 +120,9 @@ if [[ "$PUSH" == true ]] && git ls-remote --exit-code --tags origin "$TAG" >/dev
 	fail "Tag $TAG already exists on origin."
 fi
 echo "Releasing $CURRENT → $VERSION"
+
+step "Installing exact dependencies"
+npm ci
 
 step "Updating versions and CHANGELOG"
 TODAY="$(date +%Y-%m-%d)"
@@ -152,9 +159,6 @@ fs.writeFileSync('CHANGELOG.md', log);
 NODE
 # Re-format what we rewrote so the lint step stays green.
 npx prettier --log-level warn --write package.json public/manifest.json CHANGELOG.md
-
-step "Installing exact dependencies"
-npm ci
 
 step "Verifying"
 npm run verify
