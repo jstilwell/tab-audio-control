@@ -46,6 +46,26 @@ tests/                 unit tests; tests/e2e/ for browser tests
 store/                 Chrome Web Store listing copy and images
 ```
 
+## Releasing
+
+Maintainers cut releases with `bin/build.sh`:
+
+```sh
+bin/build.sh                    # verify + package the current version, no git changes
+bin/build.sh patch              # or minor, major, or an exact x.y.z
+bin/build.sh minor --push       # also push and publish a GitHub release with the zip
+bin/build.sh patch --store-assets   # also re-render the store screenshots
+```
+
+A release must start from a clean `main` with notes under `## [Unreleased]` in `CHANGELOG.md`. The script then:
+
+- bumps `package.json`, `package-lock.json`, and the manifest together, and dates the changelog
+- runs `npm ci` and the full verify suite
+- builds the zip and checks it for files that must not ship
+- commits `chore(release): vX.Y.Z` and tags it
+
+Uploading to the Chrome Web Store stays manual; the script prints the steps.
+
 ## Conventions
 
 - TypeScript, strict. Svelte 5 runes.

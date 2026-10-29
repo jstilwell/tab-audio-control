@@ -89,6 +89,7 @@ Requires Node 22+.
 npm run dev        # rebuild on change, then reload the extension
 npm run verify     # type check, lint, unit tests, browser tests
 npm run package    # verify, then zip dist/ into release/ for the Web Store
+bin/build.sh patch # cut a release (see CONTRIBUTING.md)
 ```
 
 The browser tests run in Playwright's Chromium (`npx playwright install chromium` on a fresh machine). They render real audio through the processing chain, run the in-page engine against playing media, and load the packaged extension.
