@@ -1,0 +1,36 @@
+{
+	"manifest_version": 3,
+	"name": "Tab Audio Control",
+	"short_name": "Tab Audio",
+	"version": "0.1.0",
+	"description": "Per-tab volume, boost, EQ and voice focus that keeps full screen working.",
+	"minimum_chrome_version": "116",
+	"icons": {
+		"16": "icons/icon-16.png",
+		"32": "icons/icon-32.png",
+		"48": "icons/icon-48.png",
+		"128": "icons/icon-128.png"
+	},
+	"action": {
+		"default_title": "Tab Audio Control",
+		"default_popup": "popup/index.html",
+		"default_icon": {
+			"16": "icons/icon-16.png",
+			"32": "icons/icon-32.png"
+		}
+	},
+	"background": {
+		"service_worker": "background.js",
+		"type": "module"
+	},
+	"commands": {
+		"_execute_action": {
+			"suggested_key": {
+				"default": "Alt+Shift+A"
+			},
+			"description": "Open Tab Audio Control for the current tab"
+		}
+	},
+	"permissions": ["activeTab", "scripting", "storage"],
+	"optional_permissions": ["tabCapture", "offscreen"]
+}

@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Engine test page</title>
+	</head>
+	<body>
+		<audio id="local" src="/tone.wav" loop></audio>
+		<button id="fs">Full screen</button>
+		<script>
+			document.getElementById('fs').addEventListener('click', () => {
+				document.documentElement.requestFullscreen();
+			});
+		</script>
+	</body>
+</html>
