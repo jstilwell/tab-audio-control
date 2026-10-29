@@ -5,8 +5,16 @@ updates:
     schedule:
       interval: monthly
     groups:
+      # Routine bumps arrive as one PR; majors come separately so one blocked
+      # major can't hold up every patch.
       dev-dependencies:
         dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # svelte-check (^5 || ^6) and typescript-eslint (<6.1) don't support
+      # TypeScript 7 yet. Remove this once both widen their peer ranges.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:
