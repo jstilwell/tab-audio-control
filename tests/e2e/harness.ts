@@ -1,6 +1,7 @@
 // Runs the real AudioGraph in an OfflineAudioContext and reports per-channel
 // levels, so the specs can check routing math against an actual browser.
 import { AudioGraph } from '../../src/audio/graph';
+import { drawIcon, iconImageData } from '../../src/shared/icon';
 import { defaultSettings, sanitizeSettings, type AudioSettings } from '../../src/shared/settings';
 
 export interface Signal {
@@ -39,4 +40,4 @@ async function render(partial: Partial<AudioSettings>, signal: Signal) {
 	return { left: level(0), right: level(1) };
 }
 
-Object.assign(window, { render });
+Object.assign(window, { render, drawIcon, iconImageData });

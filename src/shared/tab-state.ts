@@ -2,6 +2,7 @@
 // service-worker restarts, cleared when the browser quits. Content scripts
 // cannot read it (session storage defaults to trusted contexts only).
 
+import { iconImageData } from './icon';
 import { badgeText, sanitizeSettings, type AudioSettings } from './settings';
 
 export type Engine = 'page' | 'capture';
@@ -36,10 +37,17 @@ const BADGE_COLORS: Record<Engine, string> = {
 	capture: '#e8512a'
 };
 
-/** Shows the tab's volume (or M / fx) on the toolbar icon; clears it when untouched. */
+/**
+ * Shows the tab's state on the toolbar: the waveform icon tracks its volume
+ * (flatlined when muted), and the badge shows the number (or M / fx).
+ */
 export async function updateBadge(tabId: number, state: TabState | undefined): Promise<void> {
 	const text = state ? badgeText(state.settings) || (state.engine === 'capture' ? 'cap' : '') : '';
 	try {
+		await chrome.action.setIcon({
+			tabId,
+			imageData: iconImageData(state?.settings ?? { volume: 1, muted: false })
+		});
 		await chrome.action.setBadgeText({ tabId, text });
 		if (text && state) {
 			await chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_COLORS[state.engine] });
