@@ -1,9 +1,10 @@
 // Renders the Chrome Web Store listing images into store/ from the real popup:
+//   icon-128.png            128×128 store icon (copied from public/icons)
 //   screenshot-{1,2,3}.png  1280×800
 //   promo-small.png         440×280
 // Run after `npm run build`: npm run store-assets
 import { chromium } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { copyFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { stubMediaTab } from './popup-stub.mjs';
 
@@ -133,5 +134,9 @@ await compose(
 	 </div>`,
 	'promo-small.png'
 );
+
+// The store icon is the manifest's 128px icon: 96×96 artwork, 16px transparent padding.
+await copyFile(resolve(root, 'public/icons/icon-128.png'), out('icon-128.png'));
+console.log('store/icon-128.png');
 
 await context.close();

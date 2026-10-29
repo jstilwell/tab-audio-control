@@ -40,11 +40,11 @@ Copy for the [Developer Dashboard](https://chrome.google.com/webstore/devconsole
 
 **Graphic assets:**
 
-| Field                      | File                                                       |
-| -------------------------- | ---------------------------------------------------------- |
-| Store icon (128×128)       | `public/icons/icon-128.png`                                |
-| Screenshots (1280×800)     | `screenshot-1.png`, `screenshot-2.png`, `screenshot-3.png` |
-| Small promo tile (440×280) | `promo-small.png`                                          |
+| Field                      | File                                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| Store icon (128×128)       | `icon-128.png` (96×96 artwork with 16px transparent padding, per store guidelines) |
+| Screenshots (1280×800)     | `screenshot-1.png`, `screenshot-2.png`, `screenshot-3.png`                         |
+| Small promo tile (440×280) | `promo-small.png`                                                                  |
 
 **Website / support:** https://github.com/jstilwell/tab-audio-control
 
