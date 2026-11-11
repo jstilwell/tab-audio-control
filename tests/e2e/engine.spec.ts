@@ -114,6 +114,20 @@ test('cross-origin media without CORS is volume-only, never silenced', async ({ 
 	expect(await volume()).toBe(1);
 	await apply(page, { muted: true });
 	expect(await volume()).toBe(0);
+
+	// The site's own slider: its level is kept, and later changes start from it.
+	await apply(page, { volume: 0.5 });
+	await page.evaluate(() => ((document.getElementById('remote') as HTMLAudioElement).volume = 0.3));
+	await page.waitForTimeout(100);
+	expect(await volume()).toBeCloseTo(0.3);
+	await apply(page, { volume: 1 });
+	expect(await volume()).toBeCloseTo(0.6);
+	// Muted here stays muted, whatever the site does.
+	await apply(page, { muted: true });
+	await page.evaluate(() => ((document.getElementById('remote') as HTMLAudioElement).volume = 0.8));
+	await expect.poll(volume).toBe(0);
+	await apply(page, { muted: false });
+	expect(await volume()).toBeCloseTo(0.8);
 });
 
 test('full screen still works while the engine is processing', async ({ page }) => {
