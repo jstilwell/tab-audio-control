@@ -31,8 +31,9 @@ export function isTainted(
 export function findMedia(root: ParentNode): HTMLMediaElement[] {
 	const found: HTMLMediaElement[] = [];
 	const visit = (node: ParentNode) => {
-		for (const el of node.querySelectorAll<HTMLMediaElement>('video, audio')) found.push(el);
+		// One walk finds both the players and the shadow roots to look inside.
 		for (const el of node.querySelectorAll('*')) {
+			if (el instanceof HTMLMediaElement) found.push(el);
 			if (el.shadowRoot) visit(el.shadowRoot);
 		}
 	};

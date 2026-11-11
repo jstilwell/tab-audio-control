@@ -1,17 +1,9 @@
 <script lang="ts">
 	import { formatFrequency, usesGain, usesQ } from '../../shared/dsp';
-	import { FILTER_TYPES, LIMITS, clamp, type FilterType } from '../../shared/settings';
+	import { FILTER_LABELS, FILTER_TYPES, LIMITS, clamp } from '../../shared/settings';
 	import { ui } from '../state.svelte';
 
 	let { disabled = false }: { disabled?: boolean } = $props();
-
-	const TYPE_LABELS: Record<FilterType, string> = {
-		peaking: 'Peak',
-		lowshelf: 'Low shelf',
-		highshelf: 'High shelf',
-		highpass: 'High-pass',
-		lowpass: 'Low-pass'
-	};
 
 	const band = $derived(ui.settings.bands[ui.selectedBand]);
 
@@ -46,7 +38,7 @@
 				<span>Shape</span>
 				<select bind:value={band.type} {disabled}>
 					{#each FILTER_TYPES as t (t)}
-						<option value={t}>{TYPE_LABELS[t]}</option>
+						<option value={t}>{FILTER_LABELS[t]}</option>
 					{/each}
 				</select>
 			</label>
