@@ -80,6 +80,22 @@ test('picks up players added later', async ({ page }) => {
 	await expect.poll(() => page.evaluate(() => window.__tabAudio!.status().routed)).toBe(2);
 });
 
+test('stops counting players the page removed, and knows them when they return', async ({
+	page
+}) => {
+	await load(page);
+	expect((await apply(page, { volume: 2 })).routed).toBe(1);
+	const status = () => page.evaluate(() => window.__tabAudio!.status());
+	const el = await page.evaluateHandle(() => document.getElementById('local') as HTMLAudioElement);
+
+	await el.evaluate((a) => (a.pause(), a.remove()));
+	expect(await status()).toMatchObject({ total: 0, routed: 0 });
+
+	// Back in the page it is still routed: it must not be mistaken for volume-only.
+	await el.evaluate((a) => document.body.append(a));
+	await expect.poll(status).toMatchObject({ total: 1, routed: 1, limited: 0 });
+});
+
 test('cross-origin media without CORS is volume-only, never silenced', async ({ page }) => {
 	await load(page);
 	await page.evaluate(async (p) => {
