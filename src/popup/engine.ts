@@ -31,13 +31,7 @@ export interface Connection {
 	blocked: boolean;
 }
 
-const EMPTY_STATUS: FrameStatus = {
-	total: 0,
-	routed: 0,
-	limited: 0,
-	playing: false,
-	waitingForGesture: false
-};
+const EMPTY_STATUS: FrameStatus = summarize([]);
 
 async function captureActive(tabId: number): Promise<boolean> {
 	try {

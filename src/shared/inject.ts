@@ -52,10 +52,11 @@ export function summarize(frames: FrameResult[]): FrameStatus {
 			total: acc.total + status.total,
 			routed: acc.routed + status.routed,
 			limited: acc.limited + status.limited,
+			silenced: acc.silenced + status.silenced,
 			playing: acc.playing || status.playing,
 			waitingForGesture: acc.waitingForGesture || status.waitingForGesture
 		}),
-		{ total: 0, routed: 0, limited: 0, playing: false, waitingForGesture: false }
+		{ total: 0, routed: 0, limited: 0, silenced: 0, playing: false, waitingForGesture: false }
 	);
 }
 

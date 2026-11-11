@@ -27,6 +27,8 @@ function createEngine(): ContentApi {
 	const routed = new WeakSet<HTMLMediaElement>();
 	/** Tainted or already claimed by the page's own AudioContext: volume-only. */
 	const limited = new Map<HTMLMediaElement, number>();
+	/** Routed, then switched to media Web Audio may not read: Chrome plays it as silence. */
+	const silenced = new Set<HTMLMediaElement>();
 
 	/** Forgets players the page removed, so feeds that keep making new ones don't pile up. */
 	function prune() {
@@ -34,6 +36,7 @@ function createEngine(): ContentApi {
 			if (!el.isConnected && el.paused) {
 				known.delete(el);
 				limited.delete(el);
+				silenced.delete(el);
 			}
 		}
 	}
@@ -122,10 +125,21 @@ function createEngine(): ContentApi {
 		prune();
 		// Leave the page untouched until the user actually changes something.
 		if (!isDefault(settings) || ctx) adopt(el);
-		// A src swap can turn a routable element into a tainted one.
-		el.addEventListener('loadedmetadata', () => {
-			if (!routed.has(el) && !limited.has(el) && (!isDefault(settings) || ctx)) adopt(el);
-		});
+		el.addEventListener('loadedmetadata', onMetadata);
+	}
+
+	// One shared listener, so tracking a returning element again doesn't add a second.
+	function onMetadata(e: Event) {
+		const el = e.currentTarget as HTMLMediaElement;
+		if (routed.has(el)) {
+			// A new source on a routed element can be one Web Audio may not read.
+			// Routing can't be undone, so all we can do is say so in the popup.
+			if (isTainted(el.currentSrc, el.crossOrigin, location.origin)) silenced.add(el);
+			else silenced.delete(el);
+		} else if (!limited.has(el) && (!isDefault(settings) || ctx)) {
+			// It had no source when first seen, so it couldn't be judged until now.
+			adopt(el);
+		}
 	}
 
 	function watch() {
@@ -155,6 +169,7 @@ function createEngine(): ContentApi {
 			total: known.size,
 			routed: [...known].filter((el) => routed.has(el)).length,
 			limited: limited.size,
+			silenced: silenced.size,
 			playing: [...known].some((el) => !el.paused && !el.muted),
 			waitingForGesture: ctx !== undefined && ctx.state !== 'running' && known.size > 0
 		};
