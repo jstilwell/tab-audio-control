@@ -43,17 +43,20 @@ function createEngine(): ContentApi {
 		ctx = new AudioContext();
 		graph = new AudioGraph(ctx, ctx.destination);
 		graph.apply(settings);
+		// Autoplay policy: the popup click doesn't count as a gesture on the
+		// page. Until the page has one, the context stays suspended — and
+		// routing media into it would silence the video, so we wait. A touch
+		// only counts when the finger lifts, and some keys never count, so keep
+		// listening until the context really runs.
+		const gestures = ['pointerdown', 'pointerup', 'keydown'];
+		const resume = () => void ctx?.resume();
 		ctx.addEventListener('statechange', () => {
-			if (ctx?.state === 'running') for (const el of known) adopt(el);
+			if (ctx?.state !== 'running') return;
+			for (const type of gestures) window.removeEventListener(type, resume, true);
+			for (const el of known) adopt(el);
 		});
 		if (ctx.state !== 'running') {
-			// Autoplay policy: the popup click doesn't count as a gesture on the
-			// page. Until the page has one, the context stays suspended — and
-			// routing media into it would silence the video, so we wait.
-			const resume = () => void ctx?.resume();
-			for (const type of ['pointerdown', 'keydown']) {
-				window.addEventListener(type, resume, { capture: true, once: true });
-			}
+			for (const type of gestures) window.addEventListener(type, resume, true);
 			void ctx.resume();
 		}
 		return ctx;

@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Saving a preset no longer fails silently once you have many: the popup stops at 16, the most that reliably fit in Chrome's sync storage, and tells you if a save doesn't go through.
 - Opening the popup on a page no longer keeps every player the page later removes in memory. (Players the extension is actively processing are still held by Chrome itself until the page reloads.)
 - On sites where the extension can only turn a player down, it now follows the site's own volume slider instead of snapping back to an old level.
+- A tap on a touch screen now counts as the click Chrome needs before the extension can take over a page's sound.
 
 ## [0.1.0] - 2026-10-29
 
