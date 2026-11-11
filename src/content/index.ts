@@ -81,14 +81,35 @@ function createEngine(): ContentApi {
 
 	function limit(el: HTMLMediaElement) {
 		limited.set(el, el.volume);
+		el.addEventListener('volumechange', onPageVolume);
 		applyLimited(el);
+	}
+
+	/** What the volume-only fallback multiplies the page's own volume by. */
+	function limitedFactor(): number {
+		return settings.muted ? 0 : Math.min(1, settings.volume);
 	}
 
 	/** Volume-only fallback: can turn down and mute, never boost. */
 	function applyLimited(el: HTMLMediaElement) {
 		const original = limited.get(el);
 		if (original === undefined) return;
-		el.volume = settings.muted ? 0 : original * Math.min(1, settings.volume);
+		el.volume = Math.min(1, original * limitedFactor());
+	}
+
+	/**
+	 * The site's own volume control moved a volume-only player. Keep the level
+	 * the user just chose there and work back to what it means at 100%, so the
+	 * two sliders don't fight and the next change here starts from that level.
+	 */
+	function onPageVolume(e: Event) {
+		const el = e.currentTarget as HTMLMediaElement;
+		const original = limited.get(el);
+		const factor = limitedFactor();
+		// Our own writes also land here; they already match.
+		if (original === undefined || el.volume === Math.min(1, original * factor)) return;
+		limited.set(el, factor > 0 ? el.volume / factor : el.volume);
+		applyLimited(el);
 	}
 
 	function track(el: HTMLMediaElement) {
