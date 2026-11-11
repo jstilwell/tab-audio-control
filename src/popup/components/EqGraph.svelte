@@ -77,7 +77,8 @@
 	});
 
 	// ---------- spectrum ----------
-	// Attachment: re-runs whenever `bins` changes.
+	// Attachment: sizes the canvas and builds the gradient once. Only the nested
+	// effect re-runs for each new set of `bins` (20 a second).
 	function drawSpectrum(canvas: HTMLCanvasElement) {
 		const dpr = window.devicePixelRatio || 1;
 		canvas.width = W * dpr;
@@ -85,18 +86,22 @@
 		const g = canvas.getContext('2d');
 		if (!g) return;
 		g.setTransform(dpr, 0, 0, dpr, 0, 0);
-		g.clearRect(0, 0, W, H);
-		if (bins.length === 0) return;
+		// shortcut: colors are read once, so a system theme switch while the popup
+		// is open only reaches the spectrum the next time the popup opens.
 		const css = getComputedStyle(canvas);
 		const grad = g.createLinearGradient(0, TOP, 0, BOTTOM);
 		grad.addColorStop(0, css.getPropertyValue('--spectrum-top'));
 		grad.addColorStop(0.55, css.getPropertyValue('--spectrum-mid'));
 		grad.addColorStop(1, css.getPropertyValue('--spectrum-low'));
 		g.fillStyle = grad;
-		const barW = W / bins.length;
-		bins.forEach((v, i) => {
-			const h = (v / 255) * (BOTTOM - TOP);
-			g.fillRect(i * barW + 0.5, BOTTOM - h, Math.max(1, barW - 1), h);
+
+		$effect(() => {
+			g.clearRect(0, 0, W, H);
+			const barW = W / bins.length;
+			bins.forEach((v, i) => {
+				const h = (v / 255) * (BOTTOM - TOP);
+				g.fillRect(i * barW + 0.5, BOTTOM - h, Math.max(1, barW - 1), h);
+			});
 		});
 	}
 
