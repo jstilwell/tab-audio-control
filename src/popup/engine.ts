@@ -12,7 +12,7 @@ import {
 	type SpectrumFrame,
 	type WorkerRequest
 } from '../shared/messages';
-import { defaultSettings, isDefault, type AudioSettings } from '../shared/settings';
+import { badgeText, defaultSettings, isDefault, type AudioSettings } from '../shared/settings';
 import {
 	clearTabState,
 	getTabState,
@@ -113,15 +113,20 @@ export function send(tabId: number, engine: Engine, settings: AudioSettings): vo
 	}
 }
 
+/** What the toolbar last showed, so drags that don't change it skip the redraw. */
+let shown = '';
+
 /** Remembers the tab's settings (so reloads keep them) and updates the badge. */
 export async function persist(tabId: number, engine: Engine, settings: AudioSettings) {
-	if (engine === 'page' && isDefault(settings)) {
-		await clearTabState(tabId);
-		await updateBadge(tabId, undefined);
-		return;
-	}
-	const state = { engine, settings };
-	await setTabState(tabId, state);
+	const state = engine === 'page' && isDefault(settings) ? undefined : { engine, settings };
+	if (state) await setTabState(tabId, state);
+	else await clearTabState(tabId);
+	// The icon and badge only depend on these; EQ, focus and balance drags don't touch them.
+	const showing = state
+		? [tabId, engine, settings.volume, settings.muted, badgeText(settings)].join()
+		: `${tabId}`;
+	if (showing === shown) return;
+	shown = showing;
 	await updateBadge(tabId, state);
 }
 
