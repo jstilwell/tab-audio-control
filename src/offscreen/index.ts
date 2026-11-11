@@ -60,7 +60,10 @@ function stop(tabId: number) {
 }
 
 chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
-	if (sender.id !== chrome.runtime.id || !isObject(msg) || msg.target !== 'offscreen') return;
+	// Only extension pages (the popup, the service worker) may drive capture;
+	// a content script has our id too, but also a tab.
+	if (sender.id !== chrome.runtime.id || sender.tab) return;
+	if (!isObject(msg) || msg.target !== 'offscreen') return;
 	switch (msg.type) {
 		case 'tac:capture-start':
 			if (!isTabId(msg.tabId) || typeof msg.streamId !== 'string') return;
@@ -80,7 +83,8 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
 });
 
 chrome.runtime.onConnect.addListener((port) => {
-	if (port.sender?.id !== chrome.runtime.id || !port.name.startsWith(`${PORT_SPECTRUM}:`)) return;
+	if (port.sender?.id !== chrome.runtime.id || port.sender.tab) return;
+	if (!port.name.startsWith(`${PORT_SPECTRUM}:`)) return;
 	const tabId = Number(port.name.slice(PORT_SPECTRUM.length + 1));
 	const timer = setInterval(() => {
 		const session = sessions.get(tabId);

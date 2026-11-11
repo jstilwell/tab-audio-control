@@ -15,6 +15,11 @@ All notable changes to this project are documented here. The format follows [Kee
 - On sites where the extension can only turn a player down, it now follows the site's own volume slider instead of snapping back to an old level.
 - A tap on a touch screen now counts as the click Chrome needs before the extension can take over a page's sound.
 - If a player the extension is processing switches to audio from another site that Chrome won't let it process, the popup now says so and offers to reload the page, instead of leaving the tab silent with no explanation.
+- If Chrome ends capture mode on its own, the tab's settings are handed back to the normal engine instead of quietly no longer applying.
+
+### Security
+
+- The capture engine now ignores messages from page scripts, matching the rule the rest of the extension already followed.
 
 ## [0.1.0] - 2026-10-29
 
