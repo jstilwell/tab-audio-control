@@ -9,7 +9,7 @@
 		usesGain,
 		usesQ
 	} from '../../shared/dsp';
-	import { BAND_COUNT, LIMITS, clamp, type EqBand } from '../../shared/settings';
+	import { BAND_COUNT, FILTER_LABELS, LIMITS, clamp, type EqBand } from '../../shared/settings';
 	import { ui } from '../state.svelte';
 
 	interface Props {
@@ -174,17 +174,9 @@
 		return () => el.removeEventListener('wheel', onWheel);
 	}
 
-	const TYPE_NAMES: Record<EqBand['type'], string> = {
-		peaking: 'peak',
-		lowshelf: 'low shelf',
-		highshelf: 'high shelf',
-		highpass: 'high-pass',
-		lowpass: 'low-pass'
-	};
-
 	function describe(b: EqBand, i: number) {
 		const gain = usesGain(b.type) ? `, ${b.gain > 0 ? '+' : ''}${b.gain} dB` : '';
-		return `Band ${i + 1}, ${TYPE_NAMES[b.type]}: ${formatFrequency(b.frequency)}Hz${gain}`;
+		return `Band ${i + 1}, ${FILTER_LABELS[b.type].toLowerCase()}: ${formatFrequency(b.frequency)}Hz${gain}`;
 	}
 </script>
 

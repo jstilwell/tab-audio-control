@@ -5,6 +5,15 @@
 export const FILTER_TYPES = ['peaking', 'lowshelf', 'highshelf', 'highpass', 'lowpass'] as const;
 export type FilterType = (typeof FILTER_TYPES)[number];
 
+/** Names shown in the popup; lowercase them for use mid-sentence. */
+export const FILTER_LABELS: Record<FilterType, string> = {
+	peaking: 'Peak',
+	lowshelf: 'Low shelf',
+	highshelf: 'High shelf',
+	highpass: 'High-pass',
+	lowpass: 'Low-pass'
+};
+
 export interface EqBand {
 	type: FilterType;
 	/** Hz */
