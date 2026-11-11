@@ -22,10 +22,13 @@ function createEngine(): ContentApi {
 	let watching = false;
 
 	const known = new Set<HTMLMediaElement>();
-	const routed = new Set<HTMLMediaElement>();
+	// Weak: Chrome itself keeps a routed element alive as long as the AudioContext
+	// lives (even with its source disconnected), but we shouldn't add to that.
+	const routed = new WeakSet<HTMLMediaElement>();
 	/** Tainted or already claimed by the page's own AudioContext: volume-only. */
 	const limited = new Map<HTMLMediaElement, number>();
 
+	/** Forgets players the page removed, so feeds that keep making new ones don't pile up. */
 	function prune() {
 		for (const el of known) {
 			if (!el.isConnected && el.paused) {
@@ -91,6 +94,8 @@ function createEngine(): ContentApi {
 	function track(el: HTMLMediaElement) {
 		if (known.has(el)) return;
 		known.add(el);
+		// Here, not just in status(): nothing polls status while the popup is closed.
+		prune();
 		// Leave the page untouched until the user actually changes something.
 		if (!isDefault(settings) || ctx) adopt(el);
 		// A src swap can turn a routable element into a tainted one.
@@ -124,7 +129,7 @@ function createEngine(): ContentApi {
 		prune();
 		return {
 			total: known.size,
-			routed: routed.size,
+			routed: [...known].filter((el) => routed.has(el)).length,
 			limited: limited.size,
 			playing: [...known].some((el) => !el.paused && !el.muted),
 			waitingForGesture: ctx !== undefined && ctx.state !== 'running' && known.size > 0
