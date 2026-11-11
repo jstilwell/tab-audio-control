@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { defaultSettings, isDefault } from '../shared/settings';
+	import { defaultSettings, isDefault, isFlatEq } from '../shared/settings';
 	import BandEditor from './components/BandEditor.svelte';
 	import EqGraph from './components/EqGraph.svelte';
 	import Presets from './components/Presets.svelte';
@@ -25,12 +25,19 @@
 	let captureConfirm = $state(false);
 	let captureBusy = $state(false);
 	let captureError = $state('');
+	/** The equalizer stays folded away until asked for; the choice is remembered. */
+	let eqOpen = $state(false);
 
 	const disabled = $derived(!conn || conn.blocked);
 	const capturing = $derived(conn?.engine === 'capture');
+	const eqHint = $derived(
+		!ui.settings.eqEnabled ? 'Off' : isFlatEq(ui.settings.bands) ? 'Flat' : 'On'
+	);
 
 	async function init() {
-		conn = await connect();
+		const [c, stored] = await Promise.all([connect(), chrome.storage.local.get('eqOpen')]);
+		conn = c;
+		eqOpen = stored.eqOpen === true;
 		if (conn) ui.settings = conn.settings;
 		loaded = true;
 	}
@@ -62,8 +69,9 @@
 		});
 	});
 
+	// The spectrum is only drawn behind the EQ, so don't stream it while that's closed.
 	$effect(() => {
-		if (!conn || conn.blocked) return;
+		if (!conn || conn.blocked || !eqOpen) return;
 		bins = [];
 		return subscribeSpectrum(conn.tabId, conn.engine, conn.spectrumFrameId, (b) => (bins = b));
 	});
@@ -206,16 +214,6 @@
 			<div class="ends" aria-hidden="true"><span>Music</span><span>Voice</span></div>
 		</section>
 
-		<section class="eq">
-			<div class="row-head">
-				<h2>Equalizer</h2>
-				<Switch bind:checked={ui.settings.eqEnabled} label="On" {disabled} />
-			</div>
-			<EqGraph {bins} {disabled} />
-			<BandEditor {disabled} />
-			<Presets {disabled} />
-		</section>
-
 		<section class="toggles">
 			<Switch
 				bind:checked={ui.settings.nightMode}
@@ -252,6 +250,25 @@
 				{disabled}
 			/>
 		</section>
+
+		<details
+			class="eq"
+			bind:open={eqOpen}
+			ontoggle={(e) => void chrome.storage.local.set({ eqOpen: e.currentTarget.open })}
+		>
+			<summary>
+				<h2>Equalizer</h2>
+				<span class="hint">{eqHint}</span>
+			</summary>
+			{#if eqOpen}
+				<div class="eq-body">
+					<Switch bind:checked={ui.settings.eqEnabled} label="Use the equalizer" {disabled} />
+					<EqGraph {bins} {disabled} />
+					<BandEditor {disabled} />
+					<Presets {disabled} />
+				</div>
+			{/if}
+		</details>
 
 		<footer>
 			<button
@@ -362,13 +379,40 @@
 		font-size: 11px;
 		color: var(--text-subtle);
 	}
-	.eq {
+	summary {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		border-radius: 6px;
+		cursor: pointer;
+		list-style: none;
+	}
+	summary::-webkit-details-marker {
+		display: none;
+	}
+	summary h2 {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	/* Chevron: points right when closed, down when open. */
+	summary h2::before {
+		content: '';
+		width: 6px;
+		height: 6px;
+		border-right: 2px solid var(--text-muted);
+		border-bottom: 2px solid var(--text-muted);
+		transform: rotate(-45deg);
+		transition: transform 120ms ease;
+	}
+	.eq[open] summary h2::before {
+		transform: rotate(45deg);
+	}
+	.eq-body {
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
-	}
-	.eq .row-head {
-		margin-bottom: 0;
+		margin-top: 10px;
 	}
 	.toggles {
 		display: grid;

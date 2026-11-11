@@ -57,7 +57,7 @@ Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**,
 Click the toolbar icon, or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd>, on a tab that's playing audio.
 
 - The toolbar icon shows the tab's state. The waveform shrinks when you turn the tab down, glows hotter above 100%, and flattens when muted.
-- Drag EQ points, or focus one and use the arrow keys (<kbd>Shift</kbd> for bigger steps). Scroll over the graph to widen or narrow a band.
+- Click **Equalizer** to open it; the popup remembers whether you left it open. Drag EQ points, or focus one and use the arrow keys (<kbd>Shift</kbd> for bigger steps). Scroll over the graph to widen or narrow a band.
 - Double-click a slider or an EQ point to reset it.
 - If a site needs it, the popup will ask you to click the page once. That's Chrome's autoplay rule.
 

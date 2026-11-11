@@ -52,10 +52,15 @@ for (const scheme of ['dark', 'light'] as const) {
 		await page.setViewportSize({ width: 380, height: 760 });
 		await page.goto(`chrome-extension://${extensionId}/popup/index.html`);
 		await expect(page.getByText('Full screen safe')).toBeVisible();
-		// Shape a curve so the screenshot shows the EQ in use.
-		await page
-			.getByRole('combobox', { name: 'EQ preset' })
-			.selectOption({ label: 'Voice Clarity' });
+		// The EQ starts folded away; open it and shape a curve for the screenshot.
+		const preset = page.getByRole('combobox', { name: 'EQ preset' });
+		await expect(preset).toBeHidden();
+		await page.locator('summary').click();
+		await preset.selectOption({ label: 'Voice Clarity' });
+		// The choice to keep it open is remembered for the next time the popup opens.
+		await expect
+			.poll(() => page.evaluate(() => chrome.storage.local.get('eqOpen')))
+			.toEqual({ eqOpen: true });
 		await page.getByRole('slider', { name: 'Volume' }).fill('120');
 		await page.waitForTimeout(300);
 		await page.screenshot({ path: `test-results/popup-${scheme}.png`, fullPage: true });

@@ -49,6 +49,7 @@ async function popupShot(scheme, setup) {
 
 /** @param {import('@playwright/test').Page} page @param {string} preset @param {string} volume @param {string} focus */
 async function shape(page, preset, volume, focus) {
+	await page.locator('summary').click();
 	await page.getByRole('combobox', { name: 'EQ preset' }).selectOption({ label: preset });
 	await page.locator('#volume').fill(volume);
 	await page.locator('#focus').fill(focus);
