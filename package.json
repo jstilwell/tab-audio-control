@@ -1,7 +1,7 @@
 {
 	"name": "tab-audio-control",
 	"private": true,
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Per-tab volume, boost, EQ and voice focus for Chrome without breaking full screen.",
 	"license": "MIT",
 	"author": "Jesse Stilwell",

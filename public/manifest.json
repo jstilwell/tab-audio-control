@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "Tab Audio Control",
 	"short_name": "Tab Audio",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Per-tab volume, boost, EQ and voice focus that keeps full screen working.",
 	"homepage_url": "https://github.com/jstilwell/tab-audio-control",
 	"minimum_chrome_version": "116",
