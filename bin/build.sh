@@ -3,7 +3,7 @@
 # Build, and optionally release, the extension.
 #
 #   bin/build.sh                     verify + package the current version (no git changes)
-#   bin/build.sh <patch|minor|major|x.y.z> [--push]
+#   bin/build.sh <patch|minor|major|x.y.z> [--push] [--publish]
 #                                    cut a release:
 #     1. preflight: on main, clean tree, tag unused, CHANGELOG has notes
 #     2. npm ci, then bump package.json + public/manifest.json together and
@@ -13,9 +13,14 @@
 #        release/tab-audio-control-<version>.crx (Web Store "Verified CRX uploads")
 #     5. commit "chore(release): v<version>" and tag v<version>
 #     6. with --push: push main + tag, create a GitHub release with the zip
+#     7. with --publish: upload the .crx to the Chrome Web Store and submit it
+#        for review
+#   bin/build.sh --publish           retry step 7 for a release that's already
+#                                    tagged (rebuilds it from the clean tag)
 #
 # Options:
 #   --push           push and publish the GitHub release (needs `gh auth login`)
+#   --publish        upload to the Chrome Web Store and submit for review
 #   --store-assets   also re-render store/ screenshots from the current popup
 #
 # Signing key (releases require it; the Web Store only accepts signed updates),
@@ -27,7 +32,13 @@
 # Put personal settings like OP_CRX_KEY_ITEM in .env.release (gitignored).
 # The key must match store/crx-public-key.pem and must never be in the repo.
 #
-# The Chrome Web Store upload stays manual: the script prints the steps at the end.
+# Chrome Web Store (--publish) uses the store's API as a service account; see
+# CONTRIBUTING.md for the one-time setup. It needs, in .env.release:
+#   CWS_PUBLISHER_ID, CWS_ITEM_ID   from the developer dashboard
+#   OP_CWS_KEY_ITEM                 1Password Document item holding the service
+#                                   account's JSON key (or $CWS_SERVICE_ACCOUNT_KEY,
+#                                   a path outside the repo)
+# Without --publish the upload stays manual: the script prints the steps at the end.
 #
 set -euo pipefail
 
@@ -38,10 +49,12 @@ cd "$ROOT_DIR"
 
 BUMP=""
 PUSH=false
+PUBLISH=false
 STORE_ASSETS=false
 for arg in "$@"; do
 	case "$arg" in
 	--push) PUSH=true ;;
+	--publish) PUBLISH=true ;;
 	--store-assets) STORE_ASSETS=true ;;
 	-h | --help)
 		awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
@@ -75,22 +88,46 @@ if [[ -f .env.release ]]; then
 	source .env.release
 fi
 
+# op_document <item id> <file name>: fetches a 1Password Document into a private
+# temp dir that's deleted when the script exits, and sets OP_FILE to its path.
+op_document() {
+	command -v op >/dev/null || fail "A 1Password item is configured but the 1Password CLI (op) isn't installed."
+	if [[ -z "${KEY_DIR:-}" ]]; then
+		KEY_DIR="$(mktemp -d)"
+		trap 'rm -rf "$KEY_DIR"' EXIT
+	fi
+	OP_FILE="$KEY_DIR/$2"
+	local args=(document get "$1" --out-file "$OP_FILE" --file-mode 0600)
+	[[ -n "${OP_VAULT:-}" ]] && args+=(--vault "$OP_VAULT")
+	echo "Reading $2 from 1Password…"
+	op "${args[@]}" >/dev/null || fail "Couldn't read 1Password item $1."
+}
+
 # Sets SIGNING_KEY to a .pem path, fetching from 1Password if configured.
 resolve_signing_key() {
 	if [[ -n "${CRX_SIGNING_KEY:-}" ]]; then
 		SIGNING_KEY="$CRX_SIGNING_KEY"
 	elif [[ -n "${OP_CRX_KEY_ITEM:-}" ]]; then
-		command -v op >/dev/null || fail "OP_CRX_KEY_ITEM is set but the 1Password CLI (op) isn't installed."
-		KEY_DIR="$(mktemp -d)"
-		trap 'rm -rf "$KEY_DIR"' EXIT
-		SIGNING_KEY="$KEY_DIR/crx-signing-key.pem"
-		local args=(document get "$OP_CRX_KEY_ITEM" --out-file "$SIGNING_KEY" --file-mode 0600)
-		[[ -n "${OP_VAULT:-}" ]] && args+=(--vault "$OP_VAULT")
-		echo "Reading the signing key from 1Password…"
-		op "${args[@]}" >/dev/null || fail "Couldn't read 1Password item $OP_CRX_KEY_ITEM."
+		op_document "$OP_CRX_KEY_ITEM" crx-signing-key.pem
+		SIGNING_KEY="$OP_FILE"
 	else
 		SIGNING_KEY="$HOME/.config/tab-audio-control/crx-signing-key.pem"
 	fi
+}
+
+# Exports what scripts/publish.mjs needs, then proves the credentials work
+# (read-only), so a bad key stops the release before anything is changed.
+check_store_access() {
+	[[ -n "${CWS_PUBLISHER_ID:-}" && -n "${CWS_ITEM_ID:-}" ]] ||
+		fail "--publish needs CWS_PUBLISHER_ID and CWS_ITEM_ID (set them in .env.release)."
+	if [[ -z "${CWS_SERVICE_ACCOUNT_KEY:-}" ]]; then
+		[[ -n "${OP_CWS_KEY_ITEM:-}" ]] ||
+			fail "--publish needs OP_CWS_KEY_ITEM (a 1Password Document item) or CWS_SERVICE_ACCOUNT_KEY (a path)."
+		op_document "$OP_CWS_KEY_ITEM" cws-service-account.json
+		CWS_SERVICE_ACCOUNT_KEY="$OP_FILE"
+	fi
+	export CWS_PUBLISHER_ID CWS_ITEM_ID CWS_SERVICE_ACCOUNT_KEY
+	node scripts/publish.mjs --check || fail "Couldn't reach the Chrome Web Store API with those credentials."
 }
 
 # Fails if the zip holds anything that shouldn't ship (keys, maps, env files).
@@ -111,6 +148,14 @@ inspect_zip() {
 # Build only
 # ---------------------------------------------------------------------------
 if [[ -z "$BUMP" ]]; then
+	if [[ "$PUBLISH" == true ]]; then
+		# Only ever upload exactly what was released.
+		step "Preflight"
+		[[ -z "$(git status --porcelain)" ]] || fail "Working tree isn't clean. Commit or stash first."
+		git tag --points-at HEAD | grep -qx "v$(json_version package.json)" ||
+			fail "--publish without a version re-uploads an existing release: check out its tag first."
+		check_store_access
+	fi
 	step "Verifying v$(json_version package.json)"
 	npm run verify
 	[[ "$STORE_ASSETS" == true ]] && { step "Rendering store assets" && node scripts/store-assets.mjs; }
@@ -120,9 +165,13 @@ if [[ -z "$BUMP" ]]; then
 	step "Signing"
 	resolve_signing_key
 	CRX_SIGNING_KEY="$SIGNING_KEY" node scripts/sign.mjs || {
-		[[ $? -eq 2 ]] || exit 1
+		[[ $? -eq 2 && "$PUBLISH" != true ]] || exit 1
 		echo "Skipped: no signing key, so no .crx (fine for local builds)."
 	}
+	if [[ "$PUBLISH" == true ]]; then
+		step "Uploading to the Chrome Web Store"
+		node scripts/publish.mjs
+	fi
 	exit 0
 fi
 
@@ -143,6 +192,7 @@ if [[ "$PUSH" == true ]]; then
 		[[ -z "$(git rev-list HEAD..origin/main)" ]] || fail "origin/main has commits you don't. Pull first."
 	fi
 fi
+[[ "$PUBLISH" == true ]] && check_store_access
 
 CURRENT="$(json_version package.json)"
 [[ "$CURRENT" == "$(json_version public/manifest.json)" ]] ||
@@ -238,10 +288,19 @@ if [[ "$PUSH" == true ]]; then
 	gh release create "$TAG" "$ZIP" --title "$TAG" --notes "$NOTES"
 fi
 
+if [[ "$PUBLISH" == true ]]; then
+	step "Uploading to the Chrome Web Store"
+	node scripts/publish.mjs || fail "The release is cut, but the store upload failed. Retry with: bin/build.sh --publish"
+fi
+
 step "Done: $TAG"
 if [[ "$PUSH" != true ]]; then
 	echo "Not pushed. When ready:  git push origin main $TAG"
 	echo "Or redo with --push next time to push and create the GitHub release too."
+fi
+if [[ "$PUBLISH" == true ]]; then
+	echo "Submitted to the Chrome Web Store for review. If the UI changed, upload new screenshots from store/ in the dashboard."
+	exit 0
 fi
 cat <<EOF
 

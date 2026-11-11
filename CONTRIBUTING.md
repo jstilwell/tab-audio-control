@@ -55,6 +55,8 @@ bin/build.sh                    # verify + package the current version, no git c
 bin/build.sh patch              # or minor, major, or an exact x.y.z
 bin/build.sh minor --push       # also push and publish a GitHub release with the zip
 bin/build.sh patch --store-assets   # also re-render the store screenshots
+bin/build.sh patch --push --publish # also upload to the Chrome Web Store and submit for review
+bin/build.sh --publish              # retry the store upload for the release that's checked out
 ```
 
 A release must start from a clean `main` with notes under `## [Unreleased]` in `CHANGELOG.md`. The script then:
@@ -64,7 +66,26 @@ A release must start from a clean `main` with notes under `## [Unreleased]` in `
 - builds the zip and checks it for files that must not ship
 - commits `chore(release): vX.Y.Z` and tags it
 
-Uploading to the Chrome Web Store stays manual; the script prints the steps.
+Without `--publish`, uploading to the Chrome Web Store is manual and the script prints the steps.
+
+### Publishing to the Chrome Web Store
+
+`--publish` runs `scripts/publish.mjs`, which uploads the signed `.crx` through the [Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api) and submits it for review. It checks the credentials before the release is cut, so a bad key changes nothing. The API only replaces the package: listing text, screenshots and the privacy form are still filled in on the dashboard, and they must be complete there before a submission can succeed.
+
+One-time setup:
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create or pick a project, enable the **Chrome Web Store API**, and create a service account. It needs no roles.
+2. Create a JSON key for the service account and save it as a 1Password Document. Don't keep a copy on disk.
+3. In the [developer dashboard](https://chrome.google.com/webstore/devconsole), add the service account's email under **Account**. A publisher can have one service account.
+4. Add to `.env.release`:
+
+   ```sh
+   CWS_PUBLISHER_ID=<dashboard → Publisher → Settings>
+   CWS_ITEM_ID=<the 32-character extension ID>
+   OP_CWS_KEY_ITEM=<1Password item ID of the JSON key>
+   ```
+
+`CWS_SERVICE_ACCOUNT_KEY` (a path outside the repo) works instead of `OP_CWS_KEY_ITEM`. Check the setup without uploading anything by running `node scripts/publish.mjs --check` with those three variables set.
 
 ### Signing
 
