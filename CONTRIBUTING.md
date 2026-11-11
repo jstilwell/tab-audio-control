@@ -77,7 +77,7 @@ Without `--publish`, uploading to the Chrome Web Store is manual and the script 
 One-time setup:
 
 1. In the [Google Cloud Console](https://console.cloud.google.com/), create or pick a project, enable the **Chrome Web Store API**, and create a service account. It needs no roles.
-2. Create a JSON key for the service account and save it as a 1Password Document. Don't keep a copy on disk.
+2. Create a JSON key for the service account and put it in 1Password, either as a Document or as the only file attached to another item (an API Credential, say). Don't keep a copy on disk.
 3. In the [developer dashboard](https://chrome.google.com/webstore/devconsole), add the service account's email under **Account**. A publisher can have one service account.
 4. Add to `.env.release`:
 

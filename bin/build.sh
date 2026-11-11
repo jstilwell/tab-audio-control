@@ -35,9 +35,10 @@
 # Chrome Web Store (--publish) uses the store's API as a service account; see
 # CONTRIBUTING.md for the one-time setup. It needs, in .env.release:
 #   CWS_PUBLISHER_ID, CWS_ITEM_ID   from the developer dashboard
-#   OP_CWS_KEY_ITEM                 1Password Document item holding the service
-#                                   account's JSON key (or $CWS_SERVICE_ACCOUNT_KEY,
-#                                   a path outside the repo)
+#   OP_CWS_KEY_ITEM                 1Password item holding the service account's
+#                                   JSON key: a Document, or any item with the key
+#                                   as its only attached file (or
+#                                   $CWS_SERVICE_ACCOUNT_KEY, a path outside the repo)
 # Without --publish the upload stays manual: the script prints the steps at the end.
 #
 set -euo pipefail
@@ -102,16 +103,31 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# op_document <item id> <file name>: fetches a 1Password Document into a private
+# op_document <item id> <file name>: fetches a file from 1Password into a private
 # temp dir that's deleted when the script exits, and sets OP_FILE to its path.
+# The item is either a Document, or any other item with exactly one file attached.
 op_document() {
 	command -v op >/dev/null || fail "A 1Password item is configured but the 1Password CLI (op) isn't installed."
 	[[ -n "$KEY_DIR" ]] || KEY_DIR="$(mktemp -d)"
 	OP_FILE="$KEY_DIR/$2"
-	local args=(document get "$1" --out-file "$OP_FILE" --file-mode 0600)
-	[[ -n "${OP_VAULT:-}" ]] && args+=(--vault "$OP_VAULT")
+	local item=(item get "$1" --format json) doc=(document get "$1" --out-file "$OP_FILE" --file-mode 0600) ref
+	if [[ -n "${OP_VAULT:-}" ]]; then
+		item+=(--vault "$OP_VAULT")
+		doc+=(--vault "$OP_VAULT")
+	fi
 	echo "Reading $2 from 1Password…"
-	op "${args[@]}" >/dev/null || fail "Couldn't read 1Password item $1."
+	# Empty for a Document; otherwise a reference to the item's one attached file.
+	ref="$(op "${item[@]}" | node -e '
+		const item = JSON.parse(require("fs").readFileSync(0, "utf8"));
+		if (item.category === "DOCUMENT") process.exit(0);
+		if (item.files?.length !== 1) process.exit(1);
+		console.log(`op://${item.vault.id}/${item.id}/${item.files[0].id}`);
+	')" || fail "Couldn't use 1Password item $1: it must be a Document, or have exactly one file attached."
+	if [[ -z "$ref" ]]; then
+		op "${doc[@]}" >/dev/null
+	else
+		op read "$ref" --out-file "$OP_FILE" --file-mode 0600 --force >/dev/null
+	fi || fail "Couldn't download the file from 1Password item $1."
 }
 
 # Sets SIGNING_KEY to a .pem path, fetching from 1Password if configured.
@@ -133,7 +149,7 @@ check_store_access() {
 		fail "--publish needs CWS_PUBLISHER_ID and CWS_ITEM_ID (set them in .env.release)."
 	if [[ -z "${CWS_SERVICE_ACCOUNT_KEY:-}" ]]; then
 		[[ -n "${OP_CWS_KEY_ITEM:-}" ]] ||
-			fail "--publish needs OP_CWS_KEY_ITEM (a 1Password Document item) or CWS_SERVICE_ACCOUNT_KEY (a path)."
+			fail "--publish needs OP_CWS_KEY_ITEM (a 1Password item ID) or CWS_SERVICE_ACCOUNT_KEY (a path)."
 		op_document "$OP_CWS_KEY_ITEM" cws-service-account.json
 		CWS_SERVICE_ACCOUNT_KEY="$OP_FILE"
 	fi
