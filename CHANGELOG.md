@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+
+- The equalizer now sits in an expandable section at the bottom of the popup, closed by default, so the everyday controls fit without scrolling. The popup remembers whether you left it open.
+
 ## [0.1.0] - 2026-10-29
 
 ### Added

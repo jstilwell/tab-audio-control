@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: October 29, 2026_
+_Last updated: November 11, 2026_
 
 Tab Audio Control is a browser extension that changes the volume and sound of Chrome tabs. It is built so that it doesn't need your data.
 
@@ -12,6 +12,7 @@ Nothing. The extension does not collect, transmit, sell, or share any personal o
 
 - **Each tab's audio settings** (volume, EQ, and the other controls) are kept in Chrome's session storage on your device, so a tab keeps its settings when it reloads. They are deleted when you close the tab or quit Chrome.
 - **EQ presets you save** are kept in Chrome's sync storage. If Chrome Sync is on, Google syncs them between your signed-in browsers, as it does for other extension settings. They contain only preset names and EQ values.
+- **Whether the equalizer section is open** is kept in Chrome's local storage on your device, so the popup opens the way you left it.
 
 No settings include page addresses, page content, or anything about the audio being played.
 
