@@ -49,8 +49,11 @@ async function popupShot(scheme, setup) {
 
 /** @param {import('@playwright/test').Page} page @param {string} preset @param {string} volume @param {string} focus */
 async function shape(page, preset, volume, focus) {
-	await page.locator('summary').click();
-	await page.getByRole('combobox', { name: 'EQ preset' }).selectOption({ label: preset });
+	// The popup remembers the equalizer being open, and every shot shares one
+	// browser profile: only the first one finds it closed.
+	const presets = page.getByRole('combobox', { name: 'EQ preset' });
+	if (!(await presets.isVisible())) await page.locator('summary').click();
+	await presets.selectOption({ label: preset });
 	await page.locator('#volume').fill(volume);
 	await page.locator('#focus').fill(focus);
 }
