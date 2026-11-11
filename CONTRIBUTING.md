@@ -66,6 +66,8 @@ A release must start from a clean `main` with notes under `## [Unreleased]` in `
 - builds the zip and checks it for files that must not ship
 - commits `chore(release): vX.Y.Z` and tags it
 
+If a step fails before the commit, the script puts the bumped files back, so the tree is clean for the next try.
+
 Without `--publish`, uploading to the Chrome Web Store is manual and the script prints the steps.
 
 ### Publishing to the Chrome Web Store

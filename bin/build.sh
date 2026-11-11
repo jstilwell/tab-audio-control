@@ -88,14 +88,25 @@ if [[ -f .env.release ]]; then
 	source .env.release
 fi
 
+# Runs however the script ends: deletes fetched keys, and if a release failed
+# between the version bump and the commit, puts the bumped files back so the
+# tree is clean for the next try.
+KEY_DIR=""
+BUMPED=false
+cleanup() {
+	if [[ -n "$KEY_DIR" ]]; then rm -rf "$KEY_DIR"; fi
+	if [[ "$BUMPED" == true ]]; then
+		git checkout --quiet HEAD -- package.json package-lock.json public/manifest.json CHANGELOG.md store
+		echo "Release not cut: version files restored." >&2
+	fi
+}
+trap cleanup EXIT
+
 # op_document <item id> <file name>: fetches a 1Password Document into a private
 # temp dir that's deleted when the script exits, and sets OP_FILE to its path.
 op_document() {
 	command -v op >/dev/null || fail "A 1Password item is configured but the 1Password CLI (op) isn't installed."
-	if [[ -z "${KEY_DIR:-}" ]]; then
-		KEY_DIR="$(mktemp -d)"
-		trap 'rm -rf "$KEY_DIR"' EXIT
-	fi
+	[[ -n "$KEY_DIR" ]] || KEY_DIR="$(mktemp -d)"
 	OP_FILE="$KEY_DIR/$2"
 	local args=(document get "$1" --out-file "$OP_FILE" --file-mode 0600)
 	[[ -n "${OP_VAULT:-}" ]] && args+=(--vault "$OP_VAULT")
@@ -218,6 +229,7 @@ step "Installing exact dependencies"
 npm ci
 
 step "Updating versions and CHANGELOG"
+BUMPED=true
 TODAY="$(date +%Y-%m-%d)"
 node - "$VERSION" "$TODAY" <<'NODE'
 const fs = require('fs');
@@ -274,6 +286,7 @@ step "Committing and tagging $TAG"
 git add package.json package-lock.json public/manifest.json CHANGELOG.md
 [[ "$STORE_ASSETS" == true ]] && git add store
 git commit --quiet -m "chore(release): $TAG"
+BUMPED=false
 git tag -a "$TAG" -m "$TAG"
 git log --oneline -1
 
