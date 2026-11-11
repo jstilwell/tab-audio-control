@@ -122,13 +122,19 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
 		void stopCapture(req.tabId).then(sendResponse);
 		return true;
 	}
-	if (req.type === 'tac:capture-ended' && sender.url?.includes(OFFSCREEN_URL)) {
+	if (
+		req.type === 'tac:capture-ended' &&
+		!sender.tab &&
+		sender.url === chrome.runtime.getURL(OFFSCREEN_URL)
+	) {
 		const tabId = req.tabId;
 		void (async () => {
 			const state = await getTabState(tabId);
 			if (state) {
 				await setTabState(tabId, { engine: 'page', settings: state.settings });
-				await updateBadge(tabId, undefined);
+				// Capture stopped on its own: hand the tab back to the in-page engine
+				// rather than leave it playing unprocessed with settings still saved.
+				await reapply(tabId, state.settings);
 			}
 			const { tabIds } = await toOffscreen<{ tabIds: number[] }>({
 				target: 'offscreen',
