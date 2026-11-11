@@ -78,7 +78,13 @@ export const BUILT_IN_PRESETS: readonly Preset[] = Object.freeze([
 	}
 ]);
 
-export const MAX_USER_PRESETS = 24;
+/**
+ * How many presets the popup lets you save. They share one chrome.storage.sync
+ * item, which Chrome caps at 8,192 bytes; 16 typical presets use about 6,500.
+ */
+export const MAX_USER_PRESETS = 16;
+/** Reads keep what older versions managed to store, so nothing is dropped. */
+const MAX_STORED_PRESETS = 24;
 const MAX_NAME_LENGTH = 32;
 
 /** Validates presets read back from chrome.storage.sync. */
@@ -94,7 +100,7 @@ export function sanitizeUserPresets(input: unknown): Preset[] {
 		if (!name || seen.has(p.id)) continue;
 		seen.add(p.id);
 		out.push({ id: p.id, name, bands: sanitizeBands(p.bands) });
-		if (out.length >= MAX_USER_PRESETS) break;
+		if (out.length >= MAX_STORED_PRESETS) break;
 	}
 	return out;
 }

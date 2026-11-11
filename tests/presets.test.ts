@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BUILT_IN_PRESETS, matchPreset, sanitizeUserPresets } from '../src/shared/presets';
+import {
+	BUILT_IN_PRESETS,
+	MAX_USER_PRESETS,
+	matchPreset,
+	sanitizeUserPresets
+} from '../src/shared/presets';
 import { BAND_COUNT, defaultSettings, sanitizeBands } from '../src/shared/settings';
 
 describe('built-in presets', () => {
@@ -30,5 +35,27 @@ describe('sanitizeUserPresets', () => {
 
 	it('returns [] for non-arrays', () => {
 		expect(sanitizeUserPresets({})).toEqual([]);
+	});
+
+	it('keeps more than the save cap, so lists stored by older versions survive', () => {
+		const stored = Array.from({ length: MAX_USER_PRESETS + 4 }, (_, i) => ({
+			id: String(i),
+			name: `P${i}`,
+			bands: []
+		}));
+		expect(sanitizeUserPresets(stored)).toHaveLength(MAX_USER_PRESETS + 4);
+	});
+});
+
+describe('preset storage', () => {
+	// chrome.storage.sync QUOTA_BYTES_PER_ITEM: the key plus the JSON of the value.
+	it('a full list of long-named presets fits in one sync item', () => {
+		const band = { type: 'highshelf', frequency: 19950, gain: -17.5, q: 17.99 };
+		const list = Array.from({ length: MAX_USER_PRESETS }, () => ({
+			id: '00000000-0000-4000-8000-000000000000',
+			name: 'x'.repeat(32),
+			bands: Array.from({ length: BAND_COUNT }, () => band)
+		}));
+		expect('presets'.length + JSON.stringify(list).length).toBeLessThan(8192);
 	});
 });
