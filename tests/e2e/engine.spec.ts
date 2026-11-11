@@ -130,6 +130,23 @@ test('cross-origin media without CORS is volume-only, never silenced', async ({ 
 	expect(await volume()).toBeCloseTo(0.8);
 });
 
+test('flags a routed player that switches to media it cannot process', async ({ page }) => {
+	await load(page);
+	expect((await apply(page, { volume: 2 })).routed).toBe(1);
+	const swap = (src: string) =>
+		page.evaluate(async (s) => {
+			const el = document.getElementById('local') as HTMLAudioElement;
+			el.src = s;
+			await el.play();
+		}, src);
+	const silenced = () => page.evaluate(() => window.__tabAudio!.status().silenced);
+
+	await swap(`http://localhost:${port}/tone.wav`);
+	await expect.poll(silenced).toBe(1);
+	await swap('/tone.wav');
+	await expect.poll(silenced).toBe(0);
+});
+
 test('full screen still works while the engine is processing', async ({ page }) => {
 	await load(page);
 	expect((await apply(page, { volume: 2, focus: 0.5 })).routed).toBe(1);

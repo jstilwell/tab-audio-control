@@ -185,6 +185,17 @@
 					>
 				</div>
 			</div>
+		{:else if conn && conn.status.silenced > 0}
+			<div class="notice">
+				<p>
+					A player here switched to audio the extension can't process, so it has gone silent. Reload
+					the page to get its sound back. If it goes silent again, reset the controls or use capture
+					mode on this site.
+				</p>
+				<button type="button" class="btn" onclick={() => conn && chrome.tabs.reload(conn.tabId)}
+					>Reload the page</button
+				>
+			</div>
 		{:else if reachProblem}
 			<div class="notice">
 				<p>{reachProblem}</p>

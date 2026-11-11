@@ -3,15 +3,26 @@ import { spectrumFrame, summarize, type FrameResult } from '../src/shared/inject
 
 const frame = (frameId: number, status: Partial<FrameResult['status']>): FrameResult => ({
 	frameId,
-	status: { total: 1, routed: 0, limited: 0, playing: false, waitingForGesture: false, ...status }
+	status: {
+		total: 1,
+		routed: 0,
+		limited: 0,
+		silenced: 0,
+		playing: false,
+		waitingForGesture: false,
+		...status
+	}
 });
 
 describe('summarize', () => {
 	it('adds counts and ORs flags across frames', () => {
-		expect(summarize([frame(0, { routed: 1 }), frame(3, { limited: 1, playing: true })])).toEqual({
+		expect(
+			summarize([frame(0, { routed: 1, silenced: 1 }), frame(3, { limited: 1, playing: true })])
+		).toEqual({
 			total: 2,
 			routed: 1,
 			limited: 1,
+			silenced: 1,
 			playing: true,
 			waitingForGesture: false
 		});

@@ -11,6 +11,8 @@ export interface FrameStatus {
 	routed: number;
 	/** Elements we can only turn down, not boost or EQ */
 	limited: number;
+	/** Routed elements that then loaded media Web Audio may not read, so they play silence */
+	silenced: number;
 	/** Any element currently playing */
 	playing: boolean;
 	/** The audio graph is waiting for a click on the page before it may start */

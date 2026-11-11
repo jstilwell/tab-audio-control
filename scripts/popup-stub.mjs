@@ -2,7 +2,14 @@
 // with a lively fake spectrum. Shared by the e2e popup test and the store
 // screenshots. Passed to page.addInitScript, so it must be self-contained.
 export function stubMediaTab() {
-	const status = { total: 1, routed: 1, limited: 0, playing: true, waitingForGesture: false };
+	const status = {
+		total: 1,
+		routed: 1,
+		limited: 0,
+		silenced: 0,
+		playing: true,
+		waitingForGesture: false
+	};
 	const c = /** @type {Record<string, Record<string, unknown>>} */ (
 		/** @type {unknown} */ (chrome)
 	);

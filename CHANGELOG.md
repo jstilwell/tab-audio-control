@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Opening the popup on a page no longer keeps every player the page later removes in memory. (Players the extension is actively processing are still held by Chrome itself until the page reloads.)
 - On sites where the extension can only turn a player down, it now follows the site's own volume slider instead of snapping back to an old level.
 - A tap on a touch screen now counts as the click Chrome needs before the extension can take over a page's sound.
+- If a player the extension is processing switches to audio from another site that Chrome won't let it process, the popup now says so and offers to reload the page, instead of leaving the tab silent with no explanation.
 
 ## [0.1.0] - 2026-10-29
 
