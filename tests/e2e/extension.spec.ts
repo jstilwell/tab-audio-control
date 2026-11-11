@@ -66,3 +66,25 @@ for (const scheme of ['dark', 'light'] as const) {
 		await page.screenshot({ path: `test-results/popup-${scheme}.png`, fullPage: true });
 	});
 }
+
+test('a preset Chrome cannot store is reported instead of silently lost', async ({
+	context,
+	extensionId
+}) => {
+	const page = await context.newPage();
+	await page.addInitScript(stubMediaTab);
+	await page.goto(`chrome-extension://${extensionId}/popup/index.html`);
+	await page.locator('summary').click();
+	await page.evaluate(() =>
+		Object.assign(chrome.storage.sync, {
+			set: () => Promise.reject(new Error('QUOTA_BYTES_PER_ITEM quota exceeded'))
+		})
+	);
+	await page.getByRole('slider', { name: /Band 3/ }).press('ArrowUp');
+	await page.getByRole('button', { name: 'Save preset' }).click();
+	await page.getByRole('textbox', { name: 'Preset name' }).fill('Mine');
+	await page.getByRole('button', { name: 'Save', exact: true }).click();
+	await expect(page.getByRole('alert')).toContainText("couldn't save");
+	// The name stays put so nothing typed is lost.
+	await expect(page.getByRole('textbox', { name: 'Preset name' })).toHaveValue('Mine');
+});

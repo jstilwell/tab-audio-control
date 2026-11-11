@@ -14,6 +14,7 @@
 	let userPresets = $state<Preset[]>([]);
 	let naming = $state(false);
 	let name = $state('');
+	let error = $state('');
 
 	onMount(() => {
 		void loadUserPresets().then((list) => (userPresets = list));
@@ -21,6 +22,20 @@
 
 	const all = $derived([...BUILT_IN_PRESETS, ...userPresets]);
 	const current = $derived(matchPreset(all, ui.settings.bands));
+	const full = $derived(userPresets.length >= MAX_USER_PRESETS);
+
+	/** Shows the new list only once Chrome has really stored it. */
+	async function store(next: Preset[]): Promise<boolean> {
+		try {
+			await saveUserPresets(next);
+			userPresets = next;
+			error = '';
+			return true;
+		} catch {
+			error = "Chrome couldn't save your presets. Delete one you don't need, then try again.";
+			return false;
+		}
+	}
 
 	function choose(e: Event & { currentTarget: HTMLSelectElement }) {
 		const preset = all.find((p) => p.id === e.currentTarget.value);
@@ -38,16 +53,16 @@
 			name: trimmed,
 			bands: $state.snapshot(ui.settings.bands)
 		};
-		userPresets = [...userPresets, preset].slice(-MAX_USER_PRESETS);
-		await saveUserPresets($state.snapshot(userPresets));
-		naming = false;
-		name = '';
+		if (await store([...$state.snapshot(userPresets), preset])) {
+			naming = false;
+			name = '';
+		}
 	}
 
 	async function remove() {
 		if (!current || current.builtIn) return;
-		userPresets = userPresets.filter((p) => p.id !== current.id);
-		await saveUserPresets($state.snapshot(userPresets));
+		const id = current.id;
+		await store($state.snapshot(userPresets).filter((p) => p.id !== id));
 	}
 </script>
 
@@ -81,11 +96,18 @@
 		{#if current && !current.builtIn}
 			<button type="button" class="btn quiet" {disabled} onclick={remove}>Delete</button>
 		{:else if !current}
-			<button type="button" class="btn" {disabled} onclick={() => (naming = true)}
+			<button type="button" class="btn" disabled={disabled || full} onclick={() => (naming = true)}
 				>Save preset</button
 			>
 		{/if}
 	</div>
+{/if}
+{#if error}
+	<p class="note" role="alert">{error}</p>
+{:else if full && !current}
+	<p class="note">
+		You have {MAX_USER_PRESETS} presets, the most that fit. Pick one and delete it to save another.
+	</p>
 {/if}
 
 <style>
@@ -97,5 +119,13 @@
 	select,
 	input {
 		flex: 1;
+	}
+	.note {
+		margin: 0;
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+	.note[role='alert'] {
+		color: var(--primary);
 	}
 </style>
